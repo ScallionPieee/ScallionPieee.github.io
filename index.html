@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI海龟汤</title> <style>
+        /* CSS样式与之前版本相同，保持不变 */
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        .api-key-section, .game-section, .controls, .answer-section, .progress-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        /* Button Styles */
+        .button-group {
+             margin-bottom: 15px;
+             text-align: center;
+        }
+        .button-group button {
+            background-color: #5cb85c;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 1em;
+            min-width: 100px;
+        }
+        .button-group button:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+        .button-group button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #askBtn {
+             background-color: #5cb85c;
+        }
+        #checkProgressBtn {
+             background-color: #337ab7;
+        }
+        #revealBtn {
+            background-color: #f0ad4e;
+        }
+        #startGameBtn {
+             background-color: #4cae4c;
+             display: block;
+             width: 100%;
+             margin-bottom: 15px;
+        }
+
+        #chatHistory {
+            height: 250px;
+            overflow-y: scroll;
+            border: 1px solid #eee;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #fff;
+            border-radius: 4px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .user-message {
+            background-color: #e7f3ff;
+            text-align: right;
+            margin-left: 40px;
+        }
+        .ai-message {
+            background-color: #f0f0f0;
+             margin-right: 40px;
+       }
+        .ai-message strong {
+            color: #d9534f;
+        }
+       .status {
+            font-style: italic;
+            color: #888;
+            text-align: center;
+            margin-top: 10px;
+            height: 1.2em;
+        }
+        .warning {
+            color: #a94442;
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        #fullAnswer {
+            background-color: #dff0d8;
+            padding: 15px;
+            border: 1px solid #d6e9c6;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        /* Progress Bar Styles */
+        .progress-container {
+            margin-bottom: 10px;
+        }
+        .progress-container label {
+             margin-bottom: 3px;
+             font-size: 0.9em;
+        }
+        progress {
+            width: 100%;
+            height: 20px;
+            border-radius: 5px;
+            overflow: hidden;
+       }
+        progress::-webkit-progress-bar {
+           background-color: #eee;
+           border-radius: 5px;
+        }
+        progress::-webkit-progress-value {
+           background-color: #5cb85c;
+           border-radius: 5px;
+           transition: width 0.3s ease;
+        }
+        progress::-moz-progress-bar {
+            background-color: #5cb85c;
+            border-radius: 5px;
+            transition: width 0.3s ease;
+       }
+       #tokenProgress::-webkit-progress-value {
+           background-color: #5bc0de;
+       }
+       #tokenProgress::-moz-progress-bar {
+            background-color: #5bc0de;
+       }
+       .progress-text {
+            font-size: 0.9em;
+            color: #555;
+            text-align: right;
+       }
+       .completeness-note {
+           font-size: 0.8em;
+           color: #777;
+           display: block;
+           margin-top: -8px;
+       }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>海龟汤 AI 游戏</h1>
+    <p>欢迎来到海龟汤游戏！AI 会给出一个谜面，你需要通过问“是/否”问题来猜出完整的故事。使用“检查进度”按钮让 AI 评估你的猜测进度。</p>
+
+    <div class="api-key-section">
+        <h2>设置</h2>
+        <div class="warning">
+            <strong>安全警告:</strong> 请在此处输入你自己的 火山方舟 API 密钥。此密钥仅在你的浏览器中使用，用于与 火山方舟 API 通信，不会被存储或发送到任何其他地方。请先开通火山方舟Deepseek V3.请勿在不信任的环境中使用或分享你的密钥。关闭此页面后密钥将丢失。
+        </div>
+        <label for="apiKey">火山方舟 API 密钥:</label>
+        <input type="password" id="apiKey" placeholder="在此输入你的 API Key (sk-...)">
+    </div>
+
+     <button id="startGameBtn">开始新游戏</button>
+
+    <div id="status" class="status"></div> <div class="progress-section" style="display: none;">
+         <h2>游戏状态</h2>
+         <div class="progress-container">
+            <label for="tokenProgress">剩余Token估算:</label>
+            <progress id="tokenProgress" max="3000" value="3000"></progress>
+            <div class="progress-text"><span id="tokenValue">3000</span> / 3000</div>
+         </div>
+         <div class="progress-container">
+            <label for="completenessProgress">猜测进度 (AI评估):</label>
+            <progress id="completenessProgress" max="100" value="0"></progress>
+            <div class="progress-text"><span id="completenessValue">0</span>%</div>
+            <span class="completeness-note">点击“检查进度”按钮更新此进度条。</span>
+         </div>
+    </div>
+
+    <div class="game-section" style="display: none;">
+        <h2>游戏进行中</h2>
+        <p><strong>谜面:</strong></p>
+        <p id="riddle"></p>
+
+        <div id="chatHistory">
+            </div>
+
+        <label for="userQuestion">你的问题:</label>
+        <input type="text" id="userQuestion" placeholder="例如：他是一个人吗？">
+
+        <div class="button-group">
+             <button id="askBtn" disabled>提问 (问AI)</button>
+             <button id="checkProgressBtn" disabled>检查进度</button>
+             <button id="revealBtn" disabled>揭晓答案</button>
+        </div>
+    </div>
+
+    <div class="answer-section" style="display: none;">
+        <h2>汤底 (完整故事)</h2>
+        <div id="fullAnswer"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- DOM 元素引用 ---
+    const apiKeyInput = document.getElementById('apiKey');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const askBtn = document.getElementById('askBtn');
+    const checkProgressBtn = document.getElementById('checkProgressBtn');
+    const revealBtn = document.getElementById('revealBtn');
+    const userQuestionInput = document.getElementById('userQuestion');
+    const riddleDisplay = document.getElementById('riddle');
+    const chatHistoryDiv = document.getElementById('chatHistory');
+    const fullAnswerDiv = document.getElementById('fullAnswer');
+    const statusDiv = document.getElementById('status');
+    const gameSection = document.querySelector('.game-section');
+    const answerSection = document.querySelector('.answer-section');
+    const progressSection = document.querySelector('.progress-section');
+    const tokenProgress = document.getElementById('tokenProgress');
+    const tokenValueSpan = document.getElementById('tokenValue');
+    const completenessProgress = document.getElementById('completenessProgress');
+    const completenessValueSpan = document.getElementById('completenessValue');
+    // **** MODIFICATION: Added reference to the API Key section ****
+    const apiKeySection = document.querySelector('.api-key-section');
+
+    // --- 常量与状态变量 ---
+    const OPENAI_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
+    const OPENAI_MODEL = 'deepseek-v3-250324';
+    // **** MODIFICATION: Increased MAX_TOKENS ****
+    const MAX_TOKENS = 3000; // 初始Token预算增加到3000
+    const ESTIMATED_TOKENS_PER_QA = 100;
+    const ESTIMATED_TOKENS_PER_PROGRESS_CHECK = 150;
+
+    let currentStory = '';
+    let currentRiddle = '';
+    let conversationLog = [];
+    let gameInProgress = false;
+    let remainingTokens = MAX_TOKENS;
+    let currentCompleteness = 0;
+
+    // --- 事件监听器 ---
+    // (No changes here)
+    startGameBtn.addEventListener('click', startGame);
+    askBtn.addEventListener('click', handleAskQuestion);
+    checkProgressBtn.addEventListener('click', handleCheckProgress);
+    revealBtn.addEventListener('click', revealAnswer);
+    userQuestionInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter' && !askBtn.disabled) {
+            handleAskQuestion();
+        }
+    });
+
+    // --- 核心游戏逻辑函数 ---
+
+    async function startGame() {
+        const apiKey = apiKeyInput.value.trim();
+        if (!apiKey) {
+            alert('请输入你的火山方舟 API 密钥。');
+            return;
+        }
+
+        resetGameState(); // 重置游戏状态 (this now makes apiKeySection visible again)
+        updateStatus('正在生成新的谜题...', true);
+        progressSection.style.display = 'block';
+
+        try {
+            const prompt = `请你扮演一个猜谜游戏的主持人。生成一个有意思有创意有新意新的独一无二的谜题，包含'谜面'（一个简短的、奇怪的情景描述）和'汤底'（完整的故事解释）。请严格按照以下JSON格式返回，不要包含任何额外的解释或Markdown标记：
+{
+  "riddle": "这里是谜面",
+  "story": "这里是完整的故事解释（汤底）"
+}`;
+            const initialApiResult = await callOpenAI(apiKey, [{ role: 'user', content: prompt }], 2, true);
+            updateTokenProgress(initialApiResult.usage?.total_tokens, ESTIMATED_TOKENS_PER_QA);
+
+            if (remainingTokens <= 0) {
+                 throw new Error('Token 不足，无法开始游戏。');
+            }
+
+            let parsedResponse;
+            const responseContent = initialApiResult.content;
+            try {
+                 const jsonString = responseContent.replace(/```json\n?([\s\S]*?)\n?```/, '$1').trim();
+                 parsedResponse = JSON.parse(jsonString);
+            } catch (parseError) {
+                 console.error("解析初始JSON失败:", parseError);
+                 const riddleMatch = responseContent.match(/["']?riddle["']?\s*:\s*["'](.*?)["']/i);
+                 const storyMatch = responseContent.match(/["']?story["']?\s*:\s*["']([\s\S]*?)["']/i);
+                 if (riddleMatch && riddleMatch[1] && storyMatch && storyMatch[1]) {
+                    parsedResponse = { riddle: riddleMatch[1], story: storyMatch[1] };
+                 } else {
+                    throw new Error(`无法从AI响应中解析出谜题和故事。响应内容: ${responseContent}`);
+                 }
+            }
+
+            if (parsedResponse && parsedResponse.riddle && parsedResponse.story) {
+                currentRiddle = parsedResponse.riddle;
+                currentStory = parsedResponse.story;
+                riddleDisplay.textContent = currentRiddle;
+                gameSection.style.display = 'block';
+                gameInProgress = true;
+
+                // **** MODIFICATION: Hide API Key section on successful start ****
+                apiKeySection.style.display = 'none';
+
+                updateStatus('游戏开始！请提问。', false);
+            } else {
+                throw new Error('AI返回的格式不正确，缺少谜面或故事。');
+            }
+
+        } catch (error) {
+            console.error('开始游戏时出错:', error);
+            updateStatus(`错误: ${error.message}`, false);
+            alert(`无法开始游戏: ${error.message}`);
+            // Do not hide API key section if start fails, resetGameState ensures it's visible
+            resetGameState();
+        } finally {
+            updateButtonStates();
+        }
+    }
+
+    async function handleAskQuestion() {
+        // (No changes in this function logic)
+        const apiKey = apiKeyInput.value.trim();
+        const question = userQuestionInput.value.trim();
+        if (!validateAskAttempt(apiKey, question)) return;
+        addMessageToHistory('user', question);
+        conversationLog.push({ role: 'user', content: question });
+        userQuestionInput.value = '';
+        updateStatus('AI 正在思考...', true);
+        updateButtonStates();
+        try {
+            const prompt = `你是一个海龟汤游戏的主持人。你必须严格遵守规则，只回答 "是"、"否" 或 "不重要"。
+完整的故事（汤底）是：“${currentStory}”
+玩家的问题是：“${question}”
+根据这个故事，判断玩家的问题。只回答 "是"、"否" 或 "不重要" 中的一个，不要添加任何其他文字、解释或标点符号。`;
+            const apiResult = await callOpenAI(apiKey, [{ role: 'user', content: prompt }], 0.7, true);
+            updateTokenProgress(apiResult.usage?.total_tokens, ESTIMATED_TOKENS_PER_QA);
+            if (remainingTokens <= 0) {
+                addMessageToHistory('system', 'Token 已用尽。');
+                updateStatus('Token 已用尽。请开始新游戏或揭晓答案。', false);
+                updateButtonStates();
+                return;
+            }
+            const answer = apiResult.content;
+            let cleanedAnswer = cleanAIResponse(answer, ['是', '否', '不重要']);
+            addMessageToHistory('ai', cleanedAnswer);
+            conversationLog.push({ role: 'assistant', content: cleanedAnswer });
+            updateStatus('请继续提问或检查进度。', false);
+        } catch (error) {
+            handleApiError('提问时出错', error);
+        } finally {
+             updateButtonStates();
+        }
+    }
+
+    async function handleCheckProgress() {
+        // (No changes in this function logic)
+         const apiKey = apiKeyInput.value.trim();
+        if (!validateGenericAttempt(apiKey)) return;
+        if (conversationLog.length < 2) {
+            alert("请至少进行一轮问答后再检查进度。");
+            return;
+        }
+        updateStatus('AI 正在评估进度...', true);
+        updateButtonStates();
+        try {
+             const progressPrompt = `你是一个评估海龟汤游戏进度的助手。
+完整的故事（汤底）是：“${currentStory}”
+到目前为止的对话记录是：
+${formatConversationForPrompt(conversationLog)}
+根据以上故事和对话，请估计玩家距离猜出完整故事的进度有多接近。请给出一个 0 到 100 之间的整数百分比数值。
+请只回答一个数字（例如：60），不要包含任何百分号、文字或解释。`;
+            const apiResult = await callOpenAI(apiKey, [{ role: 'user', content: progressPrompt }], 0.3, true, 10);
+            updateTokenProgress(apiResult.usage?.total_tokens, ESTIMATED_TOKENS_PER_PROGRESS_CHECK);
+            if (remainingTokens <= 0) {
+                addMessageToHistory('system', 'Token 已用尽，无法检查进度。');
+                updateStatus('Token 已用尽。', false);
+                updateButtonStates();
+                return;
+            }
+            const rawPercentage = apiResult.content.replace(/\D/g, '');
+            let percentage = parseInt(rawPercentage, 10);
+            if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+                console.warn(`AI返回了无效的进度值: "${apiResult.content}". 评估失败.`);
+                addMessageToHistory('system', 'AI未能评估进度。');
+                percentage = currentCompleteness;
+            } else {
+                 addMessageToHistory('system', `AI评估当前进度约为 ${percentage}%`);
+            }
+            updateCompletenessProgress(percentage);
+            updateStatus('进度已更新。请继续提问。', false);
+        } catch (error) {
+            handleApiError('检查进度时出错', error);
+        } finally {
+            updateButtonStates();
+        }
+    }
+
+
+    function revealAnswer() {
+        // (No changes in this function logic)
+        if (!gameInProgress || !currentStory) {
+             alert("还没有可以揭晓的答案。");
+             return;
+        }
+        fullAnswerDiv.textContent = currentStory;
+        answerSection.style.display = 'block';
+        updateStatus('答案已揭晓！', false);
+        gameInProgress = false;
+        updateButtonStates();
+    }
+
+    // --- 辅助函数 ---
+    // (No changes in helper functions like validateAskAttempt, validateGenericAttempt, cleanAIResponse, formatConversationForPrompt, handleApiError, addMessageToHistory)
+    function validateAskAttempt(apiKey, question) { /* ... same as before ... */
+        if (!apiKey) { alert('请输入API密钥。'); return false; }
+        if (!gameInProgress) { alert('请先开始新游戏。'); return false; }
+        if (!question) { alert('请输入你的问题。'); return false; }
+        if (remainingTokens <= 0) { alert('Token 已用尽，无法继续提问。'); return false; }
+        return true;
+    }
+    function validateGenericAttempt(apiKey) { /* ... same as before ... */
+        if (!apiKey) { alert('请输入API密钥。'); return false; }
+        if (!gameInProgress) { alert('请先开始新游戏。'); return false; }
+        if (remainingTokens <= 0) { alert('Token 已用尽。'); return false; }
+        return true;
+    }
+    function cleanAIResponse(response, validOptions) { /* ... same as before ... */
+        let cleaned = response.replace(/["'.]/g, '').trim();
+        if (!validOptions.includes(cleaned)) {
+            console.warn(`AI返回了非标准答案: "${response}". 尝试修正.`);
+            for (const option of validOptions) {
+                if (cleaned.includes(option)) {
+                    return option;
+                }
+            }
+            return '不确定 (AI未按要求回答)';
+        }
+        return cleaned;
+    }
+    function formatConversationForPrompt(log) { /* ... same as before ... */
+        return log.map(entry => `${entry.role === 'user' ? '玩家' : '主持人'}: ${entry.content}`).join('\n');
+    }
+    function handleApiError(context, error) { /* ... same as before ... */
+        console.error(`${context}:`, error);
+        updateStatus(`错误: ${error.message}`, false);
+        addMessageToHistory('system', `错误: ${error.message}`);
+    }
+    function addMessageToHistory(sender, text) { /* ... same as before ... */
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message');
+        let displayText = text;
+        if (sender === 'user') {
+            messageDiv.classList.add('user-message');
+            displayText = `你: ${text}`;
+        } else if (sender === 'ai') {
+            messageDiv.classList.add('ai-message');
+            displayText = `AI: <strong>${text}</strong>`;
+        } else {
+             messageDiv.style.fontStyle = 'italic';
+             messageDiv.style.textAlign = 'center';
+             messageDiv.style.color = text.startsWith('错误:') ? 'red' : '#666';
+        }
+        messageDiv.innerHTML = displayText;
+        chatHistoryDiv.appendChild(messageDiv);
+        chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+    }
+
+
+    function resetGameState() {
+        // **** MODIFICATION: Ensure API Key section is visible on reset ****
+        apiKeySection.style.display = 'block';
+
+        currentRiddle = '';
+        currentStory = '';
+        conversationLog = [];
+        chatHistoryDiv.innerHTML = '';
+        riddleDisplay.textContent = '';
+        fullAnswerDiv.textContent = '';
+        gameSection.style.display = 'none';
+        answerSection.style.display = 'none';
+        progressSection.style.display = 'none';
+        userQuestionInput.value = '';
+        gameInProgress = false;
+
+        // Reset progress using the new MAX_TOKENS
+        remainingTokens = MAX_TOKENS;
+        currentCompleteness = 0;
+        updateTokenProgress(); // Update display based on MAX_TOKENS
+        updateCompletenessProgress(0);
+        updateStatus('', false);
+        updateButtonStates();
+    }
+
+
+    function updateButtonStates() {
+        // (No changes in this function logic)
+        const isLoading = statusDiv.textContent.includes('...');
+        startGameBtn.disabled = isLoading;
+        const enableGameControls = gameInProgress && !isLoading && remainingTokens > 0;
+        askBtn.disabled = !enableGameControls;
+        checkProgressBtn.disabled = !enableGameControls || conversationLog.length < 2;
+        revealBtn.disabled = isLoading || !gameInProgress;
+    }
+
+
+    function updateStatus(message, isLoading) {
+        // (No changes in this function logic)
+        statusDiv.textContent = message;
+        updateButtonStates();
+    }
+
+    function updateTokenProgress(tokensUsed, fallbackEstimate = 0) {
+        // (Logic remains the same, but uses the updated MAX_TOKENS constant)
+        let actualTokensUsed = 0;
+        if (typeof tokensUsed === 'number' && tokensUsed > 0) {
+            actualTokensUsed = tokensUsed;
+            console.log(`Token 使用 (API返回): ${actualTokensUsed}`);
+        }
+        else if (tokensUsed !== undefined && fallbackEstimate > 0) {
+             actualTokensUsed = fallbackEstimate;
+             console.warn(`API 未返回Token使用量。估算使用 ${actualTokensUsed} Token。`);
+        }
+
+        if (actualTokensUsed > 0) {
+             remainingTokens -= actualTokensUsed;
+        }
+        // Clamp between 0 and MAX_TOKENS (which is now 3000)
+        remainingTokens = Math.max(0, Math.min(remainingTokens, MAX_TOKENS));
+
+        tokenProgress.value = remainingTokens;
+        // **** MODIFICATION: Ensure text display uses MAX_TOKENS ****
+        tokenValueSpan.textContent = Math.round(remainingTokens);
+        // The text like "/ 3000" is static in the HTML, so no change needed here for that part
+
+        if (remainingTokens < MAX_TOKENS * 0.2) { // Check against new max
+            tokenProgress.classList.add('low-tokens');
+        } else {
+            tokenProgress.classList.remove('low-tokens');
+        }
+
+        if (remainingTokens <= 0 && gameInProgress) {
+            updateStatus('Token 已用尽。请开始新游戏或揭晓答案。', false);
+        }
+        updateButtonStates();
+    }
+
+
+    function updateCompletenessProgress(percentage) {
+        // (No changes in this function logic)
+        currentCompleteness = Math.max(0, Math.min(percentage, 100));
+        completenessProgress.value = currentCompleteness;
+        completenessValueSpan.textContent = Math.round(currentCompleteness);
+    }
+
+    // --- OpenAI API 调用函数 ---
+    async function callOpenAI(apiKey, messages, temperature = 0.5, requestUsage = false, maxTokens = 150) {
+        // (No changes in this function logic)
+        try {
+             const requestBody = {
+                 model: OPENAI_MODEL,
+                 messages: messages,
+                 temperature: temperature,
+                 max_tokens: maxTokens
+             };
+            const response = await fetch(OPENAI_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(requestBody)
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error("API 错误数据:", errorData);
+                throw new Error(`API 请求失败: ${response.status} ${response.statusText}. ${errorData?.error?.message || ''}`);
+            }
+            const data = await response.json();
+            let content = '';
+            let usage = null;
+            if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+                 content = data.choices[0].message.content.trim();
+            } else {
+                console.error("无效的API响应结构 (choices):", data);
+                throw new Error('从API收到了无效的响应格式。');
+            }
+            if (requestUsage && data.usage) {
+                usage = data.usage;
+            } else if (requestUsage) {
+                console.warn("请求了Token使用数据，但API响应中未找到。");
+            }
+            return { content, usage };
+        } catch (error) {
+            console.error('调用 OpenAI API 时出错:', error);
+            throw error;
+        }
+    }
+
+    // --- 初始设置 ---
+    updateButtonStates(); // 页面加载时设置正确的初始按钮状态
+
+</script>
+</body>
+</html>
